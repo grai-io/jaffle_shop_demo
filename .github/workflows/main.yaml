@@ -1,0 +1,39 @@
+on: [pull_request]
+
+env:
+  DB_PASSWORD: so-secure
+
+jobs:
+  test:
+    name: Evaluate MS SQL Changes
+    runs-on: ubuntu-latest
+    services:
+      test_db:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: ${{ env.DB_PASSWORD }}
+        ports:
+          - 1433:1433
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up SQL db
+        working-directory: dev-database
+        env:
+          MSSQL_SA_PASSWORD: ${{ env.DB_PASSWORD }}
+        run: |
+          bash init-db.sh
+
+      - name: data lineage check
+        uses: grai-io/grai-actions/mssql@master
+        with:
+          namespace: default
+          workspace: "a9db1460-dc0f-46e3-a142-3bd8a51335fa"
+          client-host: "api.grai.io"
+          api-key: ${{ secrets.GRAI_API_KEY }}
+          grai-frontend-host: "https://app.grai.io"
+          db-host: test_db
+          db-port: "1433"
+          db-user: sa
+          db-password: ${{ env.DB_PASSWORD }}
